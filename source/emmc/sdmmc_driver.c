@@ -27,6 +27,7 @@
 #include "../soc/pmc.h"
 #include "../soc/pinmux.h"
 #include "../soc/gpio.h"
+#include "../utils/fatal.h"
 
 #define DPRINTF(...)
 
@@ -788,7 +789,15 @@ static int _sdmmc_config_dma(sdmmc_t *sdmmc, u32 *blkcnt_out, sdmmc_req_t *req)
 	u32 blkcnt = req->num_sectors;
 	if (blkcnt >= 0xFFFF)
 		blkcnt = 0xFFFF;
-	u64 admaaddr = sdmmc->dma_addr_fs;
+		
+	u64 admaaddr = (u64)sdmmc_calculate_dma_addr(_current_accessor, req->buf, blkcnt);
+	if (!admaaddr)
+	{
+		// buf is on a heap
+		int dma_idx = sdmmc_calculate_fitting_dma_index(_current_accessor, blkcnt);
+		admaaddr = (u64)&_current_accessor->parent->dmaBuffers[dma_idx].device_addr_buffer_masked[0];
+		sdmmc->last_dma_idx = dma_idx;
+	}
 
 	//Check alignment.
 	if (admaaddr & 7)
@@ -870,7 +879,22 @@ static int _sdmmc_execute_cmd_inner(sdmmc_t *sdmmc, sdmmc_cmd_t *cmd, sdmmc_req_
 	if (req)
 	{
 		_sdmmc_config_dma(sdmmc, &blkcnt, req);
-		armDCacheFlush(req->buf, req->blksize * blkcnt);
+		if(!sdmmc_memcpy_buf)
+		{
+			// Flush from/to phys
+			armDCacheFlush(req->buf, req->blksize * blkcnt);
+		}
+		else
+		{
+			if(req->is_write)
+			{
+				void* dma_addr = &_current_accessor->parent->dmaBuffers[sdmmc->last_dma_idx].device_addr_buffer[0];
+				memcpy(dma_addr, req->buf, req->blksize * blkcnt);
+
+				// Flush to phys
+				armDCacheFlush(dma_addr, req->blksize * blkcnt);
+			}
+		}
 
 		_sdmmc_enable_interrupts(sdmmc);
 		is_data_present = true;
@@ -892,8 +916,15 @@ static int _sdmmc_execute_cmd_inner(sdmmc_t *sdmmc, sdmmc_cmd_t *cmd, sdmmc_req_
 		{
 			sdmmc->expected_rsp_type = cmd->rsp_type;
 			_sdmmc_cache_rsp(sdmmc, sdmmc->rsp, 0x10, cmd->rsp_type);
+            
+			/*if(sdmmc->rsp[0] & 0xFDF9A080)
+			{
+				res = 0;
+				sdmmc->rsp[0] = 0; // Reset error
+			}*/
 		}
-		if (req)
+		
+		if (res && req) 
 			_sdmmc_update_dma(sdmmc);
 	}
 
@@ -903,7 +934,22 @@ static int _sdmmc_execute_cmd_inner(sdmmc_t *sdmmc, sdmmc_cmd_t *cmd, sdmmc_req_
 	{
 		if (req)
 		{
-			armDCacheFlush(req->buf, req->blksize * blkcnt);
+			if(!req->is_write)
+			{
+				if(!sdmmc_memcpy_buf)
+				{
+					// Flush from phys
+					armDCacheFlush(req->buf, req->blksize * blkcnt);
+				}
+				else
+				{
+					void* dma_addr = &_current_accessor->parent->dmaBuffers[sdmmc->last_dma_idx].device_addr_buffer[0];
+					// Flush from phys
+					armDCacheFlush(dma_addr, req->blksize * blkcnt);
+					// Copy to buffer
+					memcpy(req->buf, dma_addr, req->blksize * blkcnt);
+				}
+			}
 
 			if (blkcnt_out)
 				*blkcnt_out = blkcnt;
@@ -948,10 +994,13 @@ static int _sdmmc_config_sdmmc1()
 	PINMUX_AUX(PINMUX_AUX_SDMMC1_DAT1) = PINMUX_DRIVE_2X | PINMUX_INPUT_ENABLE | PINMUX_PARKED | PINMUX_PULL_UP;
 	PINMUX_AUX(PINMUX_AUX_SDMMC1_DAT0) = PINMUX_DRIVE_2X | PINMUX_INPUT_ENABLE | PINMUX_PARKED | PINMUX_PULL_UP;
 
+	//Make sure SDMMC1 controller is reset.
+	smcReadWriteRegister(PMC_BASE + APBDEV_PMC_NO_IOPOWER, (1 << 12), (1 << 12));
+	usleep(1000);
+
 	//Make sure the SDMMC1 controller is powered.
-	//PMC(APBDEV_PMC_NO_IOPOWER) &= ~(1 << 12);
-	//Assume 3.3V SD card voltage.
-	//PMC(APBDEV_PMC_PWR_DET_VAL) |= (1 << 12);
+	smcReadWriteRegister(PMC_BASE + APBDEV_PMC_NO_IOPOWER, ~(1 << 12), (1 << 12));
+	smcReadWriteRegister(PMC_BASE + APBDEV_PMC_PWR_DET_VAL, (1 << 12), (1 << 12));
 
 	//Set enable SD card power.
 	PINMUX_AUX(PINMUX_AUX_DMIC3_CLK) = PINMUX_INPUT_ENABLE | PINMUX_PULL_DOWN | 1; //GPIO control, pull down.
@@ -962,10 +1011,10 @@ static int _sdmmc_config_sdmmc1()
 	usleep(1000);
 
 	//Enable SD card power.
-	//max77620_regulator_set_voltage(REGULATOR_LDO2, 3300000);
-	//max77620_regulator_enable(REGULATOR_LDO2, 1);
+	max77620_regulator_set_voltage(REGULATOR_LDO2, 3300000);
+	max77620_regulator_enable(REGULATOR_LDO2, 1);
 
-	//usleep(1000);
+	usleep(1000);
 
 	//For good measure.
 	APB_MISC(APB_MISC_GP_SDMMC1_PAD_CFGPADCTRL) = 0x10000000;
@@ -1008,7 +1057,7 @@ int sdmmc_init(sdmmc_t *sdmmc, u32 id, u32 power, u32 bus_width, u32 type, int n
 	sdmmc->regs->veniotrimctl &= 0xFFFFFFFB;
 	static const u32 trim_values[] = { 2, 8, 3, 8 };
 	sdmmc->regs->venclkctl = (sdmmc->regs->venclkctl & 0xE0FFFFFF) | (trim_values[sdmmc->id] << 24);
-	sdmmc->regs->sdmemcmppadctl = (sdmmc->regs->sdmemcmppadctl & 0xF) | 7;
+	sdmmc->regs->sdmemcmppadctl = (sdmmc->regs->sdmemcmppadctl & 0xFFFFFFF0) | 7;
 	if (!_sdmmc_autocal_config_offset(sdmmc, power))
 		return 0;
 	_sdmmc_autocal_execute(sdmmc, power);
@@ -1040,8 +1089,9 @@ void sdmmc_end(sdmmc_t *sdmmc)
 		if (sdmmc->id == SDMMC_1)
 		{
 			gpio_output_enable(GPIO_PORT_E, GPIO_PIN_4, GPIO_OUTPUT_DISABLE);
-			//max77620_regulator_enable(REGULATOR_LDO2, 0);
-			msleep(100); // To power cycle min 1ms without power is needed.
+			msleep(1); // To power cycle min 1ms without power is needed.
+			max77620_regulator_enable(REGULATOR_LDO2, 0);
+			msleep(100); // Some extra.
 		}
 
 		_sdmmc_get_clkcon(sdmmc);
@@ -1095,7 +1145,7 @@ int sdmmc_enable_low_voltage(sdmmc_t *sdmmc)
 	_sdmmc_get_clkcon(sdmmc);
 
 	max77620_regulator_set_voltage(REGULATOR_LDO2, 1800000);
-	PMC(APBDEV_PMC_PWR_DET_VAL) &= ~(1 << 12);
+	smcReadWriteRegister(PMC_BASE + APBDEV_PMC_PWR_DET_VAL, ~(1 << 12), (1 << 12));
 
 	_sdmmc_autocal_config_offset(sdmmc, SDMMC_POWER_1_8);
 	_sdmmc_autocal_execute(sdmmc, SDMMC_POWER_1_8);

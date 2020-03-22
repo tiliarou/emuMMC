@@ -22,6 +22,8 @@
 #include <string.h>
 #include "nx/svc.h"
 #include "nx/smc.h"
+#include "soc/clock.h"
+#include "soc/i2c.h"
 #include "emuMMC/emummc.h"
 #include "emuMMC/emummc_ctx.h"
 #include "FS/FS_offsets.h"
@@ -46,6 +48,9 @@ extern char __argdata__;
 // TODO
 static char nintendo_path[0x80] = "Nintendo";
 
+// 1.0.0 requires special path handling because it has separate album and contents paths.
+#define FS_100_ALBUM_PATH    0
+#define FS_100_CONTENTS_PATH 1
 static char nintendo_path_album_100[0x100] = "/Nintendo/Album";
 static char nintendo_path_contents_100[0x100] = "/Nintendo/Contents";
 
@@ -174,6 +179,8 @@ void setup_hooks(void)
     INJECT_HOOK(fs_offsets->sdmmc_wrapper_read, sdmmc_wrapper_read);
     // sdmmc_wrapper_write hook
     INJECT_HOOK(fs_offsets->sdmmc_wrapper_write, sdmmc_wrapper_write);
+    // sdmmc_wrapper_controller_close hook
+    INJECT_HOOK(fs_offsets->sdmmc_accessor_controller_close, sdmmc_wrapper_controller_close);
 
     // On 8.0.0+, we need to hook the regulator setup, because
     // otherwise it will abort because we have already turned it on.
@@ -203,10 +210,6 @@ void populate_function_pointers(void)
 
 void write_nops(void)
 {
-    // This NOPs out a call to ShutdownSdCard when preparing for shutdown/reboot.
-    // This prevents the PatrolReader from hanging when saving its state, which
-    // occurs immediately afterwards (in ShutdownMmc).
-    INJECT_NOP(fs_offsets->shutdown_sd);
     // On 7.0.0+, we need to attach to device address space ourselves.
     // This patches an abort that happens when Nintendo's code sees SD
     // is already attached
@@ -275,23 +278,18 @@ void setup_nintendo_paths(void)
         // 1.0.0 needs special handling because it uses two paths.
         // Do album path
         {
-            int path_len = snprintf(nintendo_path_album_100, sizeof(nintendo_path_album_100), "/%s/Album", nintendo_path);
+            snprintf(nintendo_path_album_100, sizeof(nintendo_path_album_100), "/%s/Album", nintendo_path);
             intptr_t nintendo_album_path_location = (intptr_t)&nintendo_path_album_100;
-            intptr_t album_path_location = nintendo_album_path_location + path_len - 6; // "/Album"
-            uintptr_t fs_n_adrp_opcode_location = INJECT_OFFSET(uintptr_t, fs_offsets->nintendo_paths[0].adrp_offset);
-            uintptr_t fs_adrp_opcode_location = INJECT_OFFSET(uintptr_t, fs_offsets->nintendo_paths[1].adrp_offset);
-            write_adrp_add(fs_offsets->nintendo_paths[0].opcode_reg, fs_n_adrp_opcode_location, fs_offsets->nintendo_paths[0].add_rel_offset, nintendo_album_path_location);
-            write_adrp_add(fs_offsets->nintendo_paths[1].opcode_reg, fs_adrp_opcode_location, fs_offsets->nintendo_paths[1].add_rel_offset, album_path_location);
+            uintptr_t fs_adrp_opcode_location = INJECT_OFFSET(uintptr_t, fs_offsets->nintendo_paths[FS_100_ALBUM_PATH].adrp_offset);
+            write_adrp_add(fs_offsets->nintendo_paths[FS_100_ALBUM_PATH].opcode_reg, fs_adrp_opcode_location, fs_offsets->nintendo_paths[FS_100_ALBUM_PATH].add_rel_offset, nintendo_album_path_location);
         }
+
         // Do contents path
         {
-            int path_len = snprintf(nintendo_path_contents_100, sizeof(nintendo_path_contents_100), "/%s/Contents", nintendo_path);
+            snprintf(nintendo_path_contents_100, sizeof(nintendo_path_contents_100), "/%s/Contents", nintendo_path);
             intptr_t nintendo_contents_path_location = (intptr_t)&nintendo_path_contents_100;
-            intptr_t contents_path_location = nintendo_contents_path_location + path_len - 9; // "/Contents"
-            uintptr_t fs_n_adrp_opcode_location = INJECT_OFFSET(uintptr_t, fs_offsets->nintendo_paths[2].adrp_offset);
-            uintptr_t fs_adrp_opcode_location = INJECT_OFFSET(uintptr_t, fs_offsets->nintendo_paths[3].adrp_offset);
-            write_adrp_add(fs_offsets->nintendo_paths[2].opcode_reg, fs_n_adrp_opcode_location, fs_offsets->nintendo_paths[2].add_rel_offset, nintendo_contents_path_location);
-            write_adrp_add(fs_offsets->nintendo_paths[3].opcode_reg, fs_adrp_opcode_location, fs_offsets->nintendo_paths[3].add_rel_offset, contents_path_location);
+            uintptr_t fs_adrp_opcode_location = INJECT_OFFSET(uintptr_t, fs_offsets->nintendo_paths[FS_100_CONTENTS_PATH].adrp_offset);
+            write_adrp_add(fs_offsets->nintendo_paths[FS_100_CONTENTS_PATH].opcode_reg, fs_adrp_opcode_location, fs_offsets->nintendo_paths[FS_100_CONTENTS_PATH].add_rel_offset, nintendo_contents_path_location);
         }
     }
 }
@@ -317,5 +315,6 @@ void __init()
     write_nops();
     setup_nintendo_paths();
 
-    sdmmc_initialize();
+    clock_enable_i2c5();
+    i2c_init();
 }

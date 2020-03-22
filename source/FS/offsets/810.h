@@ -14,39 +14,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __FS_800_H__
-#define __FS_800_H__
+#ifndef __FS_810_H__
+#define __FS_810_H__
 
 // Accessor vtable getters
-#define FS_OFFSET_800_SDMMC_ACCESSOR_GC   0x15EA20
-#define FS_OFFSET_800_SDMMC_ACCESSOR_SD   0x15E790
-#define FS_OFFSET_800_SDMMC_ACCESSOR_NAND 0x15AC80
+#define FS_OFFSET_810_SDMMC_ACCESSOR_GC   0x15EA20
+#define FS_OFFSET_810_SDMMC_ACCESSOR_SD   0x15E790
+#define FS_OFFSET_810_SDMMC_ACCESSOR_NAND 0x15AC80
 
 // Hooks
-#define FS_OFFSET_800_SDMMC_WRAPPER_READ  0x152A80
-#define FS_OFFSET_800_SDMMC_WRAPPER_WRITE 0x152B60
-#define FS_OFFSET_800_RTLD                0x5B4
-#define FS_OFFSET_800_RTLD_DESTINATION    0x9C
+#define FS_OFFSET_810_SDMMC_WRAPPER_READ  0x152A80
+#define FS_OFFSET_810_SDMMC_WRAPPER_WRITE 0x152B60
+#define FS_OFFSET_810_RTLD                0x5B4
+#define FS_OFFSET_810_RTLD_DESTINATION    0x9C
 
-#define FS_OFFSET_800_CLKRST_SET_MIN_V_CLK_RATE 0x16F370
+#define FS_OFFSET_810_CLKRST_SET_MIN_V_CLK_RATE 0x16F370
 
 // Misc funcs
-#define FS_OFFSET_800_LOCK_MUTEX          0x14B6D0
-#define FS_OFFSET_800_UNLOCK_MUTEX        0x14B720
+#define FS_OFFSET_810_LOCK_MUTEX          0x14B6D0
+#define FS_OFFSET_810_UNLOCK_MUTEX        0x14B720
 
-#define FS_OFFSET_800_SDMMC_WRAPPER_CONTROLLER_CLOSE 0x1529E0
+#define FS_OFFSET_810_SDMMC_WRAPPER_CONTROLLER_CLOSE 0x1529E0
 
 // Misc Data
-#define FS_OFFSET_800_SD_MUTEX            0xF1A3E8
-#define FS_OFFSET_800_NAND_MUTEX          0xF15BE8
-#define FS_OFFSET_800_ACTIVE_PARTITION    0xF15C28
-#define FS_OFFSET_800_SDMMC_DAS_HANDLE    0xE167C0
+#define FS_OFFSET_810_SD_MUTEX            0xF1A3E8
+#define FS_OFFSET_810_NAND_MUTEX          0xF15BE8
+#define FS_OFFSET_810_ACTIVE_PARTITION    0xF15C28
+#define FS_OFFSET_810_SDMMC_DAS_HANDLE    0xE167C0
 
 // NOPs
-#define FS_OFFSET_800_SD_DAS_INIT         0x87D58
+#define FS_OFFSET_810_SD_DAS_INIT         0x87D58
 
 // Nintendo Paths
-#define FS_OFFSET_800_NINTENDO_PATHS \
+#define FS_OFFSET_810_NINTENDO_PATHS \
 { \
     {.opcode_reg = 3, .adrp_offset = 0x0007F5F0, .add_rel_offset = 4}, \
     {.opcode_reg = 3, .adrp_offset = 0x00081084, .add_rel_offset = 4}, \
@@ -56,4 +56,4 @@
     {.opcode_reg = 0, .adrp_offset = 0, .add_rel_offset = 0} \
 }
 
-#endif // __FS_800_H__
+#endif // __FS_810_H__

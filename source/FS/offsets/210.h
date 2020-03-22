@@ -34,6 +34,8 @@
 #define FS_OFFSET_210_LOCK_MUTEX          0x3264
 #define FS_OFFSET_210_UNLOCK_MUTEX        0x32D0
 
+#define FS_OFFSET_210_SDMMC_WRAPPER_CONTROLLER_CLOSE 0x737D4
+
 // Misc Data
 #define FS_OFFSET_210_SD_MUTEX            0xE43268
 #define FS_OFFSET_210_NAND_MUTEX          0xE3DED0
@@ -41,16 +43,15 @@
 #define FS_OFFSET_210_SDMMC_DAS_HANDLE    0xE3CDD0
 
 // NOPs
-#define FS_OFFSET_210_SHUTDOWN_SD         0x20E60
 #define FS_OFFSET_210_SD_DAS_INIT         0x0
 
 // Nintendo Paths
 #define FS_OFFSET_210_NINTENDO_PATHS \
 { \
-    {.opcode_reg = 3, .adrp_offset = 0x000342E0, .add_rel_offset = 4}, \
-    {.opcode_reg = 3, .adrp_offset = 0x0003545C, .add_rel_offset = 4}, \
-    {.opcode_reg = 3, .adrp_offset = 0x00035754, .add_rel_offset = 4}, \
-    {.opcode_reg = 0, .adrp_offset = 0, .add_rel_offset = 0}, \
+	{.opcode_reg = 3, .adrp_offset = 0x000342E0, .add_rel_offset = 0x00000004}, \
+	{.opcode_reg = 3, .adrp_offset = 0x0003545C, .add_rel_offset = 0x0000000C}, \
+	{.opcode_reg = 3, .adrp_offset = 0x00035754, .add_rel_offset = 0x0000000C}, \
+	{.opcode_reg = 0, .adrp_offset = 0, .add_rel_offset = 0}, \
 }
 
 #endif // __FS_210_H__

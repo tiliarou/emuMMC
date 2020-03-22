@@ -39,29 +39,35 @@
 #include "offsets/700_exfat.h"
 #include "offsets/800.h"
 #include "offsets/800_exfat.h"
+#include "offsets/810.h"
+#include "offsets/810_exfat.h"
+#include "offsets/900.h"
+#include "offsets/900_exfat.h"
+#include "offsets/910.h"
+#include "offsets/910_exfat.h"
 #include "../utils/fatal.h"
 
 #define GET_OFFSET_STRUCT_NAME(vers) g_offsets##vers
 
 #define DEFINE_OFFSET_STRUCT(vers) \
 static const fs_offsets_t GET_OFFSET_STRUCT_NAME(vers) = { \
-    .sdmmc_accessor_gc           = FS_OFFSET##vers##_SDMMC_ACCESSOR_GC, \
-    .sdmmc_accessor_sd           = FS_OFFSET##vers##_SDMMC_ACCESSOR_SD, \
-    .sdmmc_accessor_nand         = FS_OFFSET##vers##_SDMMC_ACCESSOR_NAND, \
-    .sdmmc_wrapper_read          = FS_OFFSET##vers##_SDMMC_WRAPPER_READ, \
-    .sdmmc_wrapper_write         = FS_OFFSET##vers##_SDMMC_WRAPPER_WRITE, \
-    .clkrst_set_min_v_clock_rate = FS_OFFSET##vers##_CLKRST_SET_MIN_V_CLK_RATE, \
-    .rtld                        = FS_OFFSET##vers##_RTLD, \
-    .rtld_destination            = FS_OFFSET##vers##_RTLD_DESTINATION, \
-    .lock_mutex                  = FS_OFFSET##vers##_LOCK_MUTEX, \
-    .unlock_mutex                = FS_OFFSET##vers##_UNLOCK_MUTEX, \
-    .sd_mutex                    = FS_OFFSET##vers##_SD_MUTEX, \
-    .nand_mutex                  = FS_OFFSET##vers##_NAND_MUTEX, \
-    .active_partition            = FS_OFFSET##vers##_ACTIVE_PARTITION, \
-    .sdmmc_das_handle            = FS_OFFSET##vers##_SDMMC_DAS_HANDLE, \
-    .shutdown_sd                 = FS_OFFSET##vers##_SHUTDOWN_SD, \
-    .sd_das_init                 = FS_OFFSET##vers##_SD_DAS_INIT, \
-    .nintendo_paths              = FS_OFFSET##vers##_NINTENDO_PATHS, \
+    .sdmmc_accessor_gc               = FS_OFFSET##vers##_SDMMC_ACCESSOR_GC, \
+    .sdmmc_accessor_sd               = FS_OFFSET##vers##_SDMMC_ACCESSOR_SD, \
+    .sdmmc_accessor_nand             = FS_OFFSET##vers##_SDMMC_ACCESSOR_NAND, \
+    .sdmmc_wrapper_read              = FS_OFFSET##vers##_SDMMC_WRAPPER_READ, \
+    .sdmmc_wrapper_write             = FS_OFFSET##vers##_SDMMC_WRAPPER_WRITE, \
+    .clkrst_set_min_v_clock_rate     = FS_OFFSET##vers##_CLKRST_SET_MIN_V_CLK_RATE, \
+    .rtld                            = FS_OFFSET##vers##_RTLD, \
+    .rtld_destination                = FS_OFFSET##vers##_RTLD_DESTINATION, \
+    .lock_mutex                      = FS_OFFSET##vers##_LOCK_MUTEX, \
+    .unlock_mutex                    = FS_OFFSET##vers##_UNLOCK_MUTEX, \
+    .sd_mutex                        = FS_OFFSET##vers##_SD_MUTEX, \
+    .nand_mutex                      = FS_OFFSET##vers##_NAND_MUTEX, \
+    .active_partition                = FS_OFFSET##vers##_ACTIVE_PARTITION, \
+    .sdmmc_das_handle                = FS_OFFSET##vers##_SDMMC_DAS_HANDLE, \
+    .sdmmc_accessor_controller_close = FS_OFFSET##vers##_SDMMC_WRAPPER_CONTROLLER_CLOSE, \
+    .sd_das_init                     = FS_OFFSET##vers##_SD_DAS_INIT, \
+    .nintendo_paths                  = FS_OFFSET##vers##_NINTENDO_PATHS, \
 }
 
 // Actually define offset structs
@@ -88,6 +94,12 @@ DEFINE_OFFSET_STRUCT(_700);
 DEFINE_OFFSET_STRUCT(_700_EXFAT);
 DEFINE_OFFSET_STRUCT(_800);
 DEFINE_OFFSET_STRUCT(_800_EXFAT);
+DEFINE_OFFSET_STRUCT(_810);
+DEFINE_OFFSET_STRUCT(_810_EXFAT);
+DEFINE_OFFSET_STRUCT(_900);
+DEFINE_OFFSET_STRUCT(_900_EXFAT);
+DEFINE_OFFSET_STRUCT(_910);
+DEFINE_OFFSET_STRUCT(_910_EXFAT);
 
 const fs_offsets_t *get_fs_offsets(enum FS_VER version) {
     switch (version) {
@@ -137,6 +149,18 @@ const fs_offsets_t *get_fs_offsets(enum FS_VER version) {
             return &(GET_OFFSET_STRUCT_NAME(_800));
         case FS_VER_8_0_0_EXFAT:
             return &(GET_OFFSET_STRUCT_NAME(_800_EXFAT));
+        case FS_VER_8_1_0:
+            return &(GET_OFFSET_STRUCT_NAME(_810));
+        case FS_VER_8_1_0_EXFAT:
+            return &(GET_OFFSET_STRUCT_NAME(_810_EXFAT));
+        case FS_VER_9_0_0:
+            return &(GET_OFFSET_STRUCT_NAME(_900));
+        case FS_VER_9_0_0_EXFAT:
+            return &(GET_OFFSET_STRUCT_NAME(_900_EXFAT));
+        case FS_VER_9_1_0:
+            return &(GET_OFFSET_STRUCT_NAME(_910));
+        case FS_VER_9_1_0_EXFAT:
+            return &(GET_OFFSET_STRUCT_NAME(_910_EXFAT));
         default:
             fatal_abort(Fatal_UnknownVersion);
     }

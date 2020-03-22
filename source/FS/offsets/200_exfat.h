@@ -34,6 +34,8 @@
 #define FS_OFFSET_200_EXFAT_LOCK_MUTEX          0x3264
 #define FS_OFFSET_200_EXFAT_UNLOCK_MUTEX        0x32D0
 
+#define FS_OFFSET_200_EXFAT_SDMMC_WRAPPER_CONTROLLER_CLOSE 0x733F4
+
 // Misc Data
 #define FS_OFFSET_200_EXFAT_SD_MUTEX            0xF22268
 #define FS_OFFSET_200_EXFAT_NAND_MUTEX          0xF1CED0
@@ -41,16 +43,15 @@
 #define FS_OFFSET_200_EXFAT_SDMMC_DAS_HANDLE    0xF1BDD0
 
 // NOPs
-#define FS_OFFSET_200_EXFAT_SHUTDOWN_SD         0x20C48
 #define FS_OFFSET_200_EXFAT_SD_DAS_INIT         0x0
 
 // Nintendo Paths
 #define FS_OFFSET_200_EXFAT_NINTENDO_PATHS \
 { \
-    {.opcode_reg = 3, .adrp_offset = 0x00033F08, .add_rel_offset = 4}, \
-    {.opcode_reg = 3, .adrp_offset = 0x00035084, .add_rel_offset = 4}, \
-    {.opcode_reg = 3, .adrp_offset = 0x0003537C, .add_rel_offset = 4}, \
-    {.opcode_reg = 0, .adrp_offset = 0, .add_rel_offset = 0}, \
+	{.opcode_reg = 3, .adrp_offset = 0x00033F08, .add_rel_offset = 0x00000004}, \
+	{.opcode_reg = 3, .adrp_offset = 0x00035084, .add_rel_offset = 0x0000000C}, \
+	{.opcode_reg = 3, .adrp_offset = 0x0003537C, .add_rel_offset = 0x0000000C}, \
+	{.opcode_reg = 0, .adrp_offset = 0, .add_rel_offset = 0}, \
 }
 
 #endif // __FS_200_EXFAT_H__

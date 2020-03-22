@@ -20,7 +20,8 @@
 
 #include "../utils/types.h"
 
-typedef struct {
+typedef struct
+{
     char *device_addr_buffer;
     uint64_t device_addr_buffer_size;
     char *device_addr_buffer_masked;
@@ -28,25 +29,30 @@ typedef struct {
 
 _Static_assert(__alignof(sdmmc_dma_buffer_t) == 8, "sdmmc_dma_buffer_t definition");
 
-typedef struct sdmmc_accessor_vt {
+typedef struct sdmmc_accessor_vt
+{
     void *ctor;
     void *dtor;
     void *map_device_addr_space;
     void *unmap_device_addr_space;
     void *controller_open;
-    void *controller_close;
+    uint64_t (*sdmmc_accessor_controller_close)(void *);
     uint64_t (*read_write)(void *, uint64_t, uint64_t, void *, uint64_t, uint64_t);
     // More not included because we don't use it.
 } sdmmc_accessor_vt_t;
 
-typedef struct {
+_Static_assert(__alignof(sdmmc_accessor_vt_t) == 8, "sdmmc_accessor_vt_t definition");
+
+typedef struct
+{
     void *vtab;
     t210_sdmmc_t *io_map;
     sdmmc_dma_buffer_t dmaBuffers[3];
     // More not included because we don't use it.
 } mmc_obj_t;
 
-typedef struct {
+typedef struct
+{
     sdmmc_accessor_vt_t *vtab;
     mmc_obj_t *parent;
     // More not included because we don't use it.
